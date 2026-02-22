@@ -27,6 +27,9 @@ public class Cart {
     // ── Business Methods ──────────────────────────────────
 
     public void addItem(BaseProduct product, int quantity) {
+        if (product == null)  throw new IllegalArgumentException("Product cannot be null");  // ✅ check null FIRST
+        if (quantity <= 0)    throw new IllegalArgumentException("Quantity must be positive");
+
         // If product already in cart — increase quantity
         Optional<CartItem> existing = findItem(product.getId());
         if (existing.isPresent()) {
