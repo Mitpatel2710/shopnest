@@ -1,12 +1,15 @@
 package com.shopnest;
 
 import com.shopnest.model.*;
+import com.shopnest.service.ProductAnalyticsService;
 import com.shopnest.service.ProductCatalog;
 import com.shopnest.util.ApiResponse;
 import com.shopnest.util.Page;
 import com.shopnest.util.PaginationUtil;
 
+import java.util.IntSummaryStatistics;
 import java.util.List;
+import java.util.Map;
 
 public class Main {
     public static void main(String[] args) {
@@ -277,5 +280,123 @@ public class Main {
         System.out.println("\nPaged API Response: " + pagedResponse);
         System.out.println("Page info: " + pagedResponse.getData());
         System.out.println("Items on page: " + pagedResponse.getData().getNumberOfElements());
+
+
+        // ──────────────────────────────────────────────────
+        // EC-007 — Streams & Lambdas
+        // ──────────────────────────────────────────────────
+        System.out.println("\n===== EC-007: Streams & Lambdas =====");
+
+        ProductAnalyticsService analytics =
+                new ProductAnalyticsService(catalog.getAllProducts());
+
+        // ── 1. Filtering ──────────────────────────────────
+        System.out.println("\n--- Filtering ---");
+        System.out.println("Electronics only:");
+        analytics.getByCategory("Electronics")
+                .forEach(prod -> System.out.println("  " + prod.getName()));
+
+        System.out.println("\nAvailable under ₹15000 in Electronics:");
+        analytics.getAvailableUnderPrice("Electronics", 15000)
+                .forEach(prod -> System.out.println("  " + prod.getName() + " ₹" + prod.getPrice()));
+
+        System.out.println("\nDiscount eligible:");
+        analytics.getDiscountEligible()
+                .forEach(prod -> System.out.println("  " + prod.getName()));
+
+        // ── 2. Mapping ────────────────────────────────────
+        System.out.println("\n--- Mapping ---");
+        System.out.println("Product summaries:");
+        analytics.toSummaries()
+                .forEach(s -> System.out.println("  " + s.getDisplayLabel()));
+
+        System.out.println("\nProduct names only:");
+        System.out.println("  " + analytics.getProductNames());
+
+        System.out.println("\nPrices after 15% discount:");
+        analytics.getDiscountedPrices(15)
+                .forEach(price -> System.out.printf("  ₹%.2f%n", price));
+
+        // ── 3. Sorting ────────────────────────────────────
+        System.out.println("\n--- Sorting ---");
+        System.out.println("By price (low to high):");
+        analytics.sortByPriceAsc()
+                .forEach(prod -> System.out.println("  " + prod.getName() + " ₹" + prod.getPrice()));
+
+        System.out.println("\nBy category then price:");
+        analytics.sortByCategoryThenPrice()
+                .forEach(prod -> System.out.println("  " + prod.getCategory() + " | " + prod.getName() + " ₹" + prod.getPrice()));
+
+        // ── 4. Grouping ───────────────────────────────────
+        System.out.println("\n--- Grouping ---");
+        System.out.println("Count by category:");
+        analytics.countByCategory()
+                .forEach((cat, count) -> System.out.println("  " + cat + ": " + count));
+
+        System.out.println("\nAverage price by category:");
+        analytics.avgPriceByCategory()
+                .forEach((cat, avg) -> System.out.printf("  %s: ₹%.2f%n", cat, avg));
+
+        System.out.println("\nGrouped by price range:");
+        analytics.groupByPriceRange()
+                .forEach((range, prods) -> {
+                    System.out.println("  " + range.getLabel() + ":");
+                    prods.forEach(prod -> System.out.println("    " + prod.getName() + " ₹" + prod.getPrice()));
+                });
+
+        System.out.println("\nPartitioned by availability:");
+        Map<Boolean, List<BaseProduct>> partitioned = analytics.partitionByAvailability();
+        System.out.println("  Available: "    + partitioned.get(true).size());
+        System.out.println("  Unavailable: "  + partitioned.get(false).size());
+
+        System.out.println("\nMost expensive per category:");
+        analytics.mostExpensiveByCategory()
+                .forEach((cat, prod) -> prod.ifPresent(ep ->
+                        System.out.println("  " + cat + ": " + ep.getName() + " ₹" + ep.getPrice())));
+
+        // ── 5. Aggregating ────────────────────────────────
+        System.out.println("\n--- Aggregating ---");
+        System.out.printf("  Total inventory value: ₹%.2f%n", analytics.getTotalInventoryValue());
+        analytics.getAveragePrice().ifPresent(avg -> System.out.printf("  Average price: ₹%.2f%n", avg));
+        analytics.getMaxPrice().ifPresent(max ->     System.out.printf("  Max price: ₹%.2f%n", max));
+        analytics.getMinPrice().ifPresent(min ->     System.out.printf("  Min price: ₹%.2f%n", min));
+        System.out.println("  Available products: " + analytics.countAvailable());
+
+        IntSummaryStatistics stockStats = analytics.getStockStatistics();
+        System.out.println("  Stock stats — min: " + stockStats.getMin()
+                + ", max: " + stockStats.getMax()
+                + ", avg: " + stockStats.getAverage()
+                + ", total: " + stockStats.getSum());
+
+        // ── 6. Reducing ───────────────────────────────────
+        System.out.println("\n--- Reducing ---");
+        System.out.printf("  Total price (reduce): ₹%.2f%n", analytics.getTotalPriceWithReduce());
+        analytics.getMostExpensive()
+                .ifPresent(prod -> System.out.println("  Most expensive (reduce): " + prod.getName()));
+
+        // ── 7. Collecting ─────────────────────────────────
+        System.out.println("\n--- Collecting ---");
+        System.out.println("  CSV: "       + analytics.getProductNamesCsv());
+        System.out.println("  Formatted: " + analytics.getProductNamesFormatted());
+        System.out.println("  Unique categories: " + analytics.getUniqueCategories());
+
+        // ── 8. Advanced ───────────────────────────────────
+        System.out.println("\n--- Advanced ---");
+        System.out.println("Top 3 most expensive:");
+        analytics.getTopN(3)
+                .forEach(prod -> System.out.println("  " + prod.getName() + " ₹" + prod.getPrice()));
+
+        System.out.println("\nDistinct categories (sorted):");
+        System.out.println("  " + analytics.getDistinctCategories());
+
+        System.out.println("\nMatch checks:");
+        System.out.println("  Any over ₹100000? " + analytics.anyMatch(prod -> prod.getPrice() > 100000));
+        System.out.println("  All available? "     + analytics.allMatch(BaseProduct::isAvailable));
+        System.out.println("  None free? "         + analytics.noneMatch(prod -> prod.getPrice() == 0));
+
+        System.out.println("\nFind first Electronics under ₹15000:");
+        analytics.findFirst(prod ->
+                        prod.getCategory().equals("Electronics") && prod.getPrice() < 15000)
+                .ifPresent(prod -> System.out.println("  " + prod.getName() + " ₹" + prod.getPrice()));
     }
 }
