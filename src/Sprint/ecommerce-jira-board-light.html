@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopLearn — Java Full Stack Board</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f2f8;
+    --surface: #ffffff;
+    --surface2: #f5f6fa;
+    --surface3: #e8eaf2;
+    --border: #d0d4e8;
+    --accent: #5b52e0;
+    --accent2: #e84060;
+    --accent3: #1db85a;
+    --accent4: #e08010;
+    --text: #1a1a2e;
+    --text2: #4a4a6a;
+    --text3: #8888aa;
+    --todo: #5b52e0;
+    --inprog: #e08010;
+    --done: #1db85a;
+    --review: #e84060;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BG */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image: linear-gradient(rgba(91,82,224,0.05) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(91,82,224,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none; z-index:0;
+  }
+
+  .wrapper { position:relative; z-index:1; }
+
+  /* HEADER */
+  header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(240,242,248,0.95);
+    backdrop-filter: blur(12px);
+    position: sticky; top:0; z-index:100;
+  }
+  .logo {
+    display:flex; align-items:center; gap:12px;
+  }
+  .logo-icon {
+    width:36px; height:36px; background: var(--accent);
+    border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+  }
+  .logo-text { font-size:18px; font-weight:800; letter-spacing:-0.5px; }
+  .logo-text span { color: var(--accent); }
+  .project-meta { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text3); }
+
+  .header-right { display:flex; align-items:center; gap:16px; }
+  .sprint-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius:20px;
+    padding: 6px 14px;
+    font-size:12px;
+    font-family:'JetBrains Mono',monospace;
+    color: var(--accent);
+  }
+  .progress-wrap { display:flex; align-items:center; gap:10px; }
+  .progress-label { font-size:12px; color:var(--text2); font-family:'JetBrains Mono',monospace; }
+  .progress-bar {
+    width:120px; height:6px;
+    background: var(--surface3);
+    border-radius:3px; overflow:hidden;
+  }
+  .progress-fill {
+    height:100%; background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius:3px;
+    transition: width 0.6s ease;
+  }
+
+  /* PHASE TABS */
+  .phase-nav {
+    padding: 20px 32px 0;
+    display:flex; gap:4px; border-bottom:1px solid var(--border);
+  }
+  .phase-tab {
+    padding:10px 20px;
+    font-size:13px; font-weight:600;
+    border-radius:8px 8px 0 0;
+    cursor:pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text3);
+    transition: all 0.2s;
+    position:relative;
+  }
+  .phase-tab:hover { color: var(--text2); background: var(--surface2); }
+  .phase-tab.active {
+    color: var(--text);
+    background: var(--surface);
+    border-color: var(--border);
+    border-bottom-color: var(--surface);
+  }
+  .phase-tab .tab-dot {
+    display:inline-block; width:7px; height:7px;
+    border-radius:50%; margin-right:7px;
+  }
+  .phase-tab.locked { opacity:0.4; cursor:not-allowed; }
+  .phase-tab.locked::after {
+    content:'🔒'; font-size:10px; margin-left:6px;
+  }
+
+  /* BOARD */
+  .board-area {
+    padding: 28px 32px;
+  }
+  .phase-header {
+    margin-bottom: 24px;
+  }
+  .phase-title {
+    font-size:26px; font-weight:800; letter-spacing:-1px;
+    margin-bottom:6px;
+  }
+  .phase-title span { color: var(--accent); }
+  .phase-desc {
+    font-size:14px; color:var(--text2);
+    max-width:600px; line-height:1.6;
+  }
+  .phase-tags { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .tag {
+    font-size:11px; font-family:'JetBrains Mono',monospace;
+    padding:3px 10px; border-radius:4px;
+    background: var(--surface2); border:1px solid var(--border);
+    color: var(--text2);
+  }
+
+  /* KANBAN COLUMNS */
+  .kanban {
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:16px;
+    min-height:500px;
+  }
+  .column {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius:12px;
+    padding:16px;
+    min-height:400px;
+  }
+  .col-header {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:16px; padding-bottom:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .col-title-wrap { display:flex; align-items:center; gap:8px; }
+  .col-dot { width:10px; height:10px; border-radius:50%; }
+  .col-title { font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+  .col-count {
+    font-size:11px; font-family:'JetBrains Mono',monospace;
+    background:var(--surface2); border:1px solid var(--border);
+    padding:2px 8px; border-radius:10px; color:var(--text3);
+  }
+
+  /* TICKET CARD */
+  .ticket {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius:8px;
+    padding:14px;
+    margin-bottom:10px;
+    cursor:pointer;
+    transition: all 0.2s;
+    position:relative;
+    overflow:hidden;
+  }
+  .ticket::before {
+    content:'';
+    position:absolute; left:0; top:0; bottom:0;
+    width:3px;
+    border-radius:3px 0 0 3px;
+  }
+  .ticket.phase1::before { background: var(--accent); }
+  .ticket.phase2::before { background: var(--accent4); }
+  .ticket:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(91,82,224,0.12);
+  }
+  .ticket-id {
+    font-size:10px; font-family:'JetBrains Mono',monospace;
+    color: var(--text3); margin-bottom:6px;
+  }
+  .ticket-title {
+    font-size:13px; font-weight:600; line-height:1.4;
+    margin-bottom:10px; color:var(--text);
+  }
+  .ticket-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .ticket-tag {
+    font-size:10px; font-family:'JetBrains Mono',monospace;
+    padding:2px 7px; border-radius:3px;
+    background: var(--surface3);
+    color: var(--text2);
+  }
+  .ticket-tag.java { background:rgba(91,82,224,0.1); color:var(--accent); border:1px solid rgba(91,82,224,0.25); }
+  .ticket-tag.design { background:rgba(224,128,16,0.1); color:var(--accent4); border:1px solid rgba(224,128,16,0.25); }
+  .ticket-tag.spring { background:rgba(29,184,90,0.1); color:var(--accent3); border:1px solid rgba(29,184,90,0.25); }
+  .ticket-tag.db { background:rgba(232,64,96,0.1); color:var(--accent2); border:1px solid rgba(232,64,96,0.25); }
+
+  .ticket-footer {
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .ticket-priority {
+    font-size:10px; font-family:'JetBrains Mono',monospace;
+    display:flex; align-items:center; gap:4px;
+  }
+  .priority-dot { width:6px; height:6px; border-radius:50%; }
+  .priority-high .priority-dot { background:var(--accent2); }
+  .priority-med .priority-dot { background:var(--accent4); }
+  .priority-low .priority-dot { background:var(--text3); }
+  .priority-high .priority-text { color:var(--accent2); }
+  .priority-med .priority-text { color:var(--accent4); }
+  .priority-low .priority-text { color:var(--text3); }
+
+  .ticket-est {
+    font-size:10px; font-family:'JetBrains Mono',monospace;
+    color:var(--text3);
+    background:var(--surface3);
+    padding:2px 7px; border-radius:3px;
+  }
+
+  /* STATUS TOGGLE */
+  .status-btn {
+    margin-top:10px;
+    width:100%;
+    padding:6px;
+    font-size:11px; font-weight:600;
+    font-family:'Syne',sans-serif;
+    border:1px solid var(--border);
+    border-radius:5px;
+    background:transparent;
+    color:var(--text3);
+    cursor:pointer;
+    transition:all 0.2s;
+  }
+  .status-btn:hover { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  /* MODAL */
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(100,100,140,0.5); backdrop-filter:blur(6px);
+    z-index:1000; align-items:center; justify-content:center;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    width:560px; max-width:95vw; max-height:85vh;
+    overflow-y:auto;
+    padding:28px;
+    position:relative;
+  }
+  .modal-close {
+    position:absolute; top:16px; right:16px;
+    background:var(--surface2); border:1px solid var(--border);
+    color:var(--text2); width:30px; height:30px;
+    border-radius:6px; cursor:pointer; font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .modal-id { font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--text3); margin-bottom:8px; }
+  .modal-title { font-size:22px; font-weight:800; letter-spacing:-0.5px; margin-bottom:16px; }
+  .modal-section { margin-bottom:20px; }
+  .modal-section-title {
+    font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text3); margin-bottom:10px; padding-bottom:6px;
+    border-bottom:1px solid var(--border);
+  }
+  .modal-desc { font-size:14px; color:var(--text2); line-height:1.7; }
+  .concept-list { list-style:none; }
+  .concept-list li {
+    font-size:13px; color:var(--text2); padding:6px 0;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:flex-start; gap:8px;
+    line-height:1.5;
+  }
+  .concept-list li::before { content:'▸'; color:var(--accent); font-size:10px; margin-top:3px; flex-shrink:0; }
+  .code-hint {
+    background:var(--surface3); border:1px solid var(--border);
+    border-radius:8px; padding:14px;
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    color:var(--accent3); line-height:1.6;
+    white-space:pre-wrap;
+  }
+  .modal-status-row {
+    display:flex; gap:8px; margin-top:16px;
+  }
+  .modal-status-btn {
+    flex:1; padding:8px;
+    font-family:'Syne',sans-serif; font-size:12px; font-weight:700;
+    border-radius:6px; cursor:pointer; border:1px solid var(--border);
+    background:var(--surface2); color:var(--text2);
+    transition:all 0.2s;
+  }
+  .modal-status-btn:hover { opacity:0.8; }
+  .modal-status-btn.todo { background:rgba(91,82,224,0.1); color:var(--todo); border-color:var(--todo); }
+  .modal-status-btn.inprog { background:rgba(224,128,16,0.1); color:var(--inprog); border-color:var(--inprog); }
+  .modal-status-btn.review { background:rgba(232,64,96,0.1); color:var(--review); border-color:var(--review); }
+  .modal-status-btn.done { background:rgba(29,184,90,0.1); color:var(--done); border-color:var(--done); }
+
+  /* PHASE LOCKED */
+  .locked-overlay {
+    display:none;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:60px 40px;
+    text-align:center;
+  }
+  .locked-overlay.show { display:block; }
+  .locked-icon { font-size:48px; margin-bottom:16px; }
+  .locked-title { font-size:20px; font-weight:800; margin-bottom:8px; }
+  .locked-desc { font-size:14px; color:var(--text2); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display:flex; gap:20px; padding:16px 32px;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+    flex-wrap:wrap;
+  }
+  .stat {
+    display:flex; align-items:center; gap:8px;
+  }
+  .stat-num {
+    font-size:20px; font-weight:800;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .stat-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; }
+  .stat-divider { width:1px; background:var(--border); }
+
+  /* SPRINT BAR */
+  .sprint-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 18px;
+    margin-bottom: 20px;
+  }
+  .sprint-bar-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .sprint-bar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .sprint-status-badge {
+    font-size: 12px; font-weight: 700; padding: 4px 12px;
+    border-radius: 20px; font-family: 'JetBrains Mono', monospace;
+  }
+  .sprint-status-badge.not-started { background: var(--surface3); color: var(--text3); }
+  .sprint-status-badge.active { background: rgba(224,128,16,0.12); color: var(--inprog); border: 1px solid var(--inprog); }
+  .sprint-status-badge.completed { background: rgba(29,184,90,0.12); color: var(--done); border: 1px solid var(--done); }
+  .sprint-date-display { font-size: 12px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+  .sprint-label { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; }
+  .sprint-date-input {
+    font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    padding: 5px 10px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); cursor: pointer; outline: none;
+  }
+  .sprint-date-input:focus { border-color: var(--accent); }
+  .sprint-btn {
+    font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif;
+    padding: 6px 16px; border-radius: 6px; cursor: pointer;
+    border: none; transition: all 0.2s;
+  }
+  .start-btn { background: var(--accent); color: #fff; }
+  .start-btn:hover { opacity: 0.85; }
+  .complete-btn { background: var(--done); color: #fff; }
+  .complete-btn:hover { opacity: 0.85; }
+  .reopen-btn { background: var(--surface3); color: var(--text2); border: 1px solid var(--border); }
+  .reopen-btn:hover { background: var(--border); }
+
+  @media(max-width:900px) {
+    .kanban { grid-template-columns:1fr 1fr; }
+    header { padding:16px; }
+    .board-area { padding:16px; }
+    .phase-nav { padding:12px 16px 0; overflow-x:auto; }
+  }
+  @media(max-width:600px) {
+    .kanban { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛒</div>
+    <div>
+      <div class="logo-text">Shop<span>Learn</span></div>
+      <div class="project-meta">PROJ-EC · Java Full Stack</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="sprint-badge">Sprint 1 — Phase 1</div>
+    <div class="progress-wrap">
+      <div class="progress-label" id="progressLabel">0%</div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+  </div>
+</header>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-num" style="color:var(--accent)" id="statTotal">0</div>
+    <div class="stat-label">Total Tickets</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <div class="stat-num" style="color:var(--text3)" id="statTodo">0</div>
+    <div class="stat-label">To Do</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <div class="stat-num" style="color:var(--inprog)" id="statInProg">0</div>
+    <div class="stat-label">In Progress</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <div class="stat-num" style="color:var(--done)" id="statDone">0</div>
+    <div class="stat-label">Done</div>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat">
+    <div class="stat-num" style="color:var(--accent4)" id="statPhases">11</div>
+    <div class="stat-label">Total Phases</div>
+  </div>
+</div>
+
+<!-- PHASE TABS -->
+<div class="phase-nav" id="phaseTabs"></div>
+
+<!-- BOARD AREA -->
+<div class="board-area">
+  <div class="phase-header">
+    <div class="phase-title" id="phaseTitle"></div>
+    <div class="phase-desc" id="phaseDesc"></div>
+    <div class="phase-tags" id="phaseTags"></div>
+  </div>
+  <div id="lockedOverlay" class="locked-overlay">
+    <div class="locked-icon">🔒</div>
+    <div class="locked-title">Phase Locked</div>
+    <div class="locked-desc">Complete Phase 1 to unlock this phase.</div>
+  </div>
+  <div id="sprintBarContainer"></div>
+  <div class="kanban" id="kanbanBoard"></div>
+</div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-id" id="modalId"></div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-section">
+      <div class="modal-section-title">Description</div>
+      <div class="modal-desc" id="modalDesc"></div>
+    </div>
+    <div class="modal-section" id="modalConceptsWrap">
+      <div class="modal-section-title">Java Concepts You'll Learn</div>
+      <ul class="concept-list" id="modalConcepts"></ul>
+    </div>
+    <div class="modal-section" id="modalCodeWrap">
+      <div class="modal-section-title">Code Hint / Structure</div>
+      <div class="code-hint" id="modalCode"></div>
+    </div>
+    <div class="modal-status-row">
+      <button class="modal-status-btn todo" onclick="setStatus(currentTicketId, 'todo')">📋 To Do</button>
+      <button class="modal-status-btn inprog" onclick="setStatus(currentTicketId, 'inprog')">⚡ In Progress</button>
+      <button class="modal-status-btn review" onclick="setStatus(currentTicketId, 'review')">👁 In Review</button>
+      <button class="modal-status-btn done" onclick="setStatus(currentTicketId, 'done')">✅ Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────
+const phases = [
+  {
+    id:1, label:"Phase 1", title:"Core Java & OOP",
+    desc:"Build the E-Commerce domain in pure Java — no frameworks. Every class you write here becomes the foundation for your Spring Boot app.",
+    tags:["OOP","Collections","Streams","Design Patterns","Generics","Exceptions"],
+    locked: false,
+    tickets: [
+      {
+        id:"EC-001", title:"Set up project structure & understand Java project anatomy",
+        priority:"high", est:"1h",
+        tags:[{label:"java",cls:"java"}],
+        desc:"Create a plain Maven/Gradle Java project. Understand package structure, main method, and how Java compiles. This is your workspace for all Phase 1 tasks.",
+        concepts:[
+          "Java project structure: src/main/java, packages, classpath",
+          "Maven basics: pom.xml, dependencies, build lifecycle",
+          "main() method — entry point of every Java program",
+          "How javac compiles .java → .class bytecode",
+          "JDK vs JRE vs JVM — what's the difference"
+        ],
+        code:`// Project structure:
+ecommerce/
+├── src/main/java/
+│   └── com/shoplearn/
+│       ├── model/         ← domain classes
+│       ├── service/       ← business logic
+│       ├── exception/     ← custom exceptions
+│       └── Main.java      ← entry point
+└── pom.xml`
+      },
+      {
+        id:"EC-002", title:"Model Product class with OOP principles",
+        priority:"high", est:"2h",
+        tags:[{label:"java",cls:"java"},{label:"OOP",cls:"design"}],
+        desc:"Create the Product class using proper OOP: encapsulation with private fields, getters/setters, constructors, and toString. This is the most important entity in our e-commerce system.",
+        concepts:[
+          "Encapsulation — private fields, public getters/setters",
+          "Constructors — default, parameterized, copy constructor",
+          "this keyword — referring to current object",
+          "toString(), equals(), hashCode() — Object methods",
+          "@Override annotation",
+          "Immutability — why final fields matter for ProductId"
+        ],
+        code:`public class Product {
+    private final String id;      // immutable ID
+    private String name;
+    private double price;
+    private int stockQuantity;
+    private String category;
+
+    // Constructors, getters, setters
+    // toString, equals, hashCode
+}`
+      },
+      {
+        id:"EC-003", title:"Build class hierarchy with Inheritance & Interfaces",
+        priority:"high", est:"3h",
+        tags:[{label:"java",cls:"java"},{label:"OOP",cls:"design"}],
+        desc:"Model different product types (ElectronicsProduct, ClothingProduct) and shared behaviors using interfaces (Discountable, Shippable). Understand when to use abstract class vs interface.",
+        concepts:[
+          "Inheritance — extends keyword, parent/child classes",
+          "Abstract classes — can't instantiate, may have abstract methods",
+          "Interfaces — contract, all methods public abstract by default",
+          "When to use interface vs abstract class (IS-A vs CAN-DO)",
+          "Method overriding vs overloading",
+          "super keyword — calling parent constructor/methods",
+          "Polymorphism — same method, different behavior"
+        ],
+        code:`interface Discountable {
+    double applyDiscount(double percent);
+}
+interface Shippable {
+    double calculateShipping();
+}
+abstract class BaseProduct implements Discountable { ... }
+class ElectronicsProduct extends BaseProduct implements Shippable { ... }
+class ClothingProduct extends BaseProduct { ... }`
+      },
+      {
+        id:"EC-004", title:"Model User, Cart and Order with relationships",
+        priority:"high", est:"2h",
+        tags:[{label:"java",cls:"java"},{label:"OOP",cls:"design"}],
+        desc:"Create User, Cart, CartItem and Order classes. Practice composition (HAS-A) relationships and understand how objects reference each other in memory.",
+        concepts:[
+          "Composition vs Inheritance — HAS-A vs IS-A",
+          "Object references — how Java stores objects in memory",
+          "Enums — OrderStatus (PENDING, CONFIRMED, SHIPPED, DELIVERED)",
+          "Inner classes vs separate classes",
+          "null safety — NullPointerException causes and prevention",
+          "Java Records (Java 16+) — immutable data carriers"
+        ],
+        code:`public class Cart {
+    private User user;               // composition
+    private List<CartItem> items;    // HAS-A relationship
+    private LocalDateTime createdAt;
+
+    public double getTotalPrice() { ... }
+}
+public enum OrderStatus { PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED }`
+      },
+      {
+        id:"EC-005", title:"Use Collections — List, Map, Set for product catalog",
+        priority:"high", est:"3h",
+        tags:[{label:"java",cls:"java"}],
+        desc:"Build an in-memory product catalog, category map, and shopping cart using Java Collections. Understand which collection to use when and why.",
+        concepts:[
+          "List — ArrayList vs LinkedList, when to use each",
+          "Map — HashMap vs LinkedHashMap vs TreeMap",
+          "Set — HashSet vs TreeSet, uniqueness guarantee",
+          "Collections utility class — sort, shuffle, unmodifiableList",
+          "Iterator pattern — iterating safely while modifying",
+          "Queue — for order processing queue",
+          "Big O of common operations: add, get, contains"
+        ],
+        code:`Map<String, List<Product>> catalog = new HashMap<>();
+// category → list of products
+
+Set<String> wishlist = new LinkedHashSet<>();
+// maintains insertion order, no duplicates
+
+Queue<Order> orderQueue = new LinkedList<>();
+// FIFO processing`
+      },
+      {
+        id:"EC-006", title:"Generics — Build reusable ApiResponse<T> and Page<T>",
+        priority:"med", est:"2h",
+        tags:[{label:"java",cls:"java"}],
+        desc:"Create generic wrapper classes you'll use throughout the entire project. ApiResponse<T> wraps every API response, Page<T> handles pagination. This is production-grade pattern.",
+        concepts:[
+          "Generics — type parameters <T>, <K,V>",
+          "Bounded type parameters — <T extends Product>",
+          "Wildcard — ? extends, ? super",
+          "Generic methods",
+          "Type erasure — what happens at runtime",
+          "Why generics eliminate ClassCastException"
+        ],
+        code:`public class ApiResponse<T> {
+    private boolean success;
+    private String message;
+    private T data;          // T can be Product, List<Order>, etc.
+    private LocalDateTime timestamp;
+}
+public class Page<T> {
+    private List<T> content;
+    private int pageNumber;
+    private int totalPages;
+    private long totalElements;
+}`
+      },
+      {
+        id:"EC-007", title:"Streams & Lambdas — Filter, sort and transform products",
+        priority:"high", est:"3h",
+        tags:[{label:"java",cls:"java"}],
+        desc:"Replace all manual for-loops with Java Streams. Filter products by category/price, sort by name, group by category, find most expensive item. This transforms how you write Java.",
+        concepts:[
+          "Lambda expressions — (params) → body",
+          "Functional interfaces — Predicate, Function, Consumer, Supplier",
+          "Stream pipeline — source → intermediate ops → terminal op",
+          "filter(), map(), sorted(), distinct(), limit()",
+          "collect() — toList(), toMap(), groupingBy()",
+          "reduce() — aggregate operations",
+          "Optional<T> — null-safe container",
+          "Method references — Product::getPrice"
+        ],
+        code:`// Filter + sort + collect
+List<Product> electronics = products.stream()
+    .filter(p -> p.getCategory().equals("Electronics"))
+    .filter(p -> p.getPrice() < 50000)
+    .sorted(Comparator.comparing(Product::getPrice))
+    .collect(Collectors.toList());
+
+// Group by category
+Map<String, List<Product>> byCategory = products.stream()
+    .collect(Collectors.groupingBy(Product::getCategory));`
+      },
+      {
+        id:"EC-008", title:"Custom Exceptions — Handle domain errors gracefully",
+        priority:"med", est:"1.5h",
+        tags:[{label:"java",cls:"java"}],
+        desc:"Create custom exceptions for every error scenario in e-commerce: out of stock, invalid order, payment failure. Learn checked vs unchecked exceptions and when to use each.",
+        concepts:[
+          "Exception hierarchy — Throwable → Error, Exception → RuntimeException",
+          "Checked vs unchecked exceptions",
+          "Creating custom exceptions — extend RuntimeException",
+          "try-catch-finally — resource cleanup",
+          "try-with-resources — AutoCloseable",
+          "Multi-catch blocks",
+          "Exception chaining — wrapping cause"
+        ],
+        code:`// Custom exceptions
+public class OutOfStockException extends RuntimeException {
+    private final String productId;
+    public OutOfStockException(String productId) {
+        super("Product " + productId + " is out of stock");
+        this.productId = productId;
+    }
+}
+public class InvalidOrderException extends RuntimeException { ... }
+public class PaymentFailedException extends RuntimeException { ... }`
+      },
+      {
+        id:"EC-009", title:"Design Patterns — Builder, Singleton, Factory, Strategy",
+        priority:"high", est:"4h",
+        tags:[{label:"java",cls:"java"},{label:"design",cls:"design"}],
+        desc:"Apply 4 essential design patterns to the e-commerce domain. These are interview favourites and production code staples. You'll use all of these in Spring Boot too.",
+        concepts:[
+          "Builder Pattern — construct complex Product/Order objects step by step",
+          "Singleton Pattern — DatabaseConfig, AppConfig (and why Spring uses it)",
+          "Factory Pattern — PaymentProcessorFactory creates UPI/Card/Wallet processors",
+          "Strategy Pattern — different discount strategies (seasonal, coupon, loyalty)",
+          "Observer Pattern — order events notify email/inventory/seller services",
+          "DRY and SOLID principles — Single Responsibility, Open/Closed"
+        ],
+        code:`// Builder Pattern
+Product product = new Product.Builder()
+    .id("P001").name("MacBook Pro")
+    .price(120000).category("Electronics")
+    .stock(10).build();
+
+// Strategy Pattern
+interface DiscountStrategy { double apply(double price); }
+class SeasonalDiscount implements DiscountStrategy { ... }
+class CouponDiscount implements DiscountStrategy { ... }`
+      },
+      {
+        id:"EC-010", title:"Write JUnit 5 tests for all domain classes",
+        priority:"med", est:"2h",
+        tags:[{label:"java",cls:"java"}],
+        desc:"Write unit tests for every class built in Phase 1. A good developer tests as they code. You'll use JUnit 5 patterns throughout the entire project.",
+        concepts:[
+          "@Test, @BeforeEach, @AfterEach annotations",
+          "Assertions — assertEquals, assertThrows, assertNotNull",
+          "@DisplayName — human readable test names",
+          "Parameterized tests — @ParameterizedTest",
+          "Test structure — Arrange, Act, Assert (AAA pattern)",
+          "Why unit tests catch bugs early",
+          "Test coverage — what it means and what to aim for"
+        ],
+        code:`@Test
+@DisplayName("Should throw OutOfStockException when stock is 0")
+void shouldThrowWhenOutOfStock() {
+    Product p = new Product.Builder().stock(0).build();
+    assertThrows(OutOfStockException.class,
+        () -> p.reduceStock(1));
+}
+
+@ParameterizedTest
+@ValueSource(doubles = {10.0, 20.0, 50.0})
+void discountShouldReducePrice(double percent) { ... }`
+      }
+    ]
+  },
+  { id:2, label:"Phase 2", title:"Database Design & JPA", desc:"Design the full DB schema and map entities with Hibernate.", tags:["JPA","Hibernate","Flyway","SQL"], locked:false,
+    tickets:[
+      { id:"EC-011", title:"Design ER diagram for e-commerce schema", priority:"high", est:"2h", tags:[{label:"db",cls:"db"}], desc:"Design the complete entity-relationship diagram covering Product, User, Order, OrderItem, Cart, Category, and Review tables.", concepts:["Primary & foreign keys","One-to-Many relationships","Many-to-Many join tables","Normalization — 1NF, 2NF, 3NF","Indexing strategy"], code:`-- Core tables\nCREATE TABLE products (id BIGINT PK, name VARCHAR, price DECIMAL, stock INT, category_id BIGINT FK);\nCREATE TABLE orders (id BIGINT PK, user_id BIGINT FK, status VARCHAR, created_at TIMESTAMP);` },
+      { id:"EC-012", title:"Set up Spring Data JPA & Hibernate", priority:"high", est:"2h", tags:[{label:"java",cls:"java"},{label:"db",cls:"db"}], desc:"Add Spring Data JPA dependency, configure datasource in application.yml, and understand how Hibernate auto-creates schema.", concepts:["spring-boot-starter-data-jpa dependency","application.yml datasource config","spring.jpa.hibernate.ddl-auto options","H2 in-memory DB for development","EntityManagerFactory & SessionFactory"], code:`spring:\n  datasource:\n    url: jdbc:h2:mem:shoplearn\n  jpa:\n    hibernate:\n      ddl-auto: update\n    show-sql: true` },
+      { id:"EC-013", title:"Map Product & Category entities with annotations", priority:"high", est:"3h", tags:[{label:"java",cls:"java"},{label:"db",cls:"db"}], desc:"Convert your plain Java Product class into a JPA entity. Map all fields with proper column constraints and relationships.", concepts:["@Entity, @Table, @Id, @GeneratedValue","@Column with nullable, length, precision","@ManyToOne, @OneToMany, @ManyToMany","CascadeType & FetchType (LAZY vs EAGER)","@JoinColumn & @JoinTable"], code:`@Entity\n@Table(name="products")\npublic class Product {\n  @Id @GeneratedValue(strategy=IDENTITY)\n  private Long id;\n  @ManyToOne(fetch=LAZY)\n  @JoinColumn(name="category_id")\n  private Category category;\n}` },
+      { id:"EC-014", title:"Create OrderRepository with custom JPQL queries", priority:"med", est:"2h", tags:[{label:"java",cls:"java"},{label:"spring",cls:"spring"}], desc:"Build repositories using Spring Data JPA. Write custom queries using JPQL and @Query annotation.", concepts:["JpaRepository<T, ID> interface","Derived query methods — findByStatusAndUserId","@Query with JPQL","@Modifying for update/delete","Pagination — Pageable, Page<T>"], code:`public interface OrderRepository extends JpaRepository<Order, Long> {\n  List<Order> findByUserIdAndStatus(Long userId, String status);\n  @Query("SELECT o FROM Order o WHERE o.total > :amount")\n  List<Order> findHighValueOrders(@Param("amount") double amount);\n}` },
+      { id:"EC-015", title:"Write Flyway migration scripts", priority:"med", est:"2h", tags:[{label:"db",cls:"db"}], desc:"Use Flyway to manage database schema versioning. Write SQL migration files that run in order.", concepts:["Flyway versioned migrations — V1__init.sql","Migration naming convention","Why DB migrations matter in teams","Flyway vs Liquibase","Rollback strategies"], code:`-- V1__create_products.sql\nCREATE TABLE products (\n  id BIGINT AUTO_INCREMENT PRIMARY KEY,\n  name VARCHAR(255) NOT NULL,\n  price DECIMAL(10,2) NOT NULL\n);\n-- V2__add_category.sql\nALTER TABLE products ADD COLUMN category_id BIGINT;` },
+    ]
+  },
+  { id:3, label:"Phase 3", title:"Spring Boot & REST APIs", desc:"Build all backend APIs for the e-commerce platform.", tags:["Spring Boot","REST","DTOs","Validation"], locked:false,
+    tickets:[
+      { id:"EC-016", title:"Bootstrap Spring Boot app with project structure", priority:"high", est:"1h", tags:[{label:"spring",cls:"spring"}], desc:"Create the Spring Boot application using Spring Initializr. Understand auto-configuration and how the app wires together.", concepts:["@SpringBootApplication, @EnableAutoConfiguration","ApplicationContext & IoC container","spring-boot-starter-web","Embedded Tomcat","Profiles — dev, prod"], code:`@SpringBootApplication\npublic class ShopLearnApp {\n  public static void main(String[] args) {\n    SpringApplication.run(ShopLearnApp.class, args);\n  }\n}` },
+      { id:"EC-017", title:"Build ProductController with full CRUD endpoints", priority:"high", est:"3h", tags:[{label:"spring",cls:"spring"},{label:"java",cls:"java"}], desc:"Create REST endpoints for Product: list all, get by ID, create, update, delete. Apply proper HTTP methods and status codes.", concepts:["@RestController, @RequestMapping","@GetMapping, @PostMapping, @PutMapping, @DeleteMapping","@PathVariable, @RequestParam, @RequestBody","ResponseEntity<T> for status control","REST conventions — 200, 201, 204, 404"], code:`@RestController\n@RequestMapping("/api/products")\npublic class ProductController {\n  @GetMapping("/{id}")\n  public ResponseEntity<ProductDTO> getById(@PathVariable Long id) {\n    return ResponseEntity.ok(service.findById(id));\n  }\n}` },
+      { id:"EC-018", title:"Implement DTOs & MapStruct mapping", priority:"high", est:"2h", tags:[{label:"java",cls:"java"},{label:"design",cls:"design"}], desc:"Never expose entities directly. Create DTO classes and use MapStruct to map between Entity ↔ DTO.", concepts:["Why DTOs — security, decoupling","Request DTO vs Response DTO","MapStruct @Mapper interface","@BeanMapping, @Mapping annotations","Record classes as DTOs (Java 16+)"], code:`@Mapper(componentModel="spring")\npublic interface ProductMapper {\n  ProductDTO toDTO(Product product);\n  Product toEntity(CreateProductRequest req);\n}` },
+      { id:"EC-019", title:"Add Bean Validation to all request DTOs", priority:"med", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Use Jakarta Validation annotations to validate incoming request data and return proper error messages.", concepts:["@Valid, @Validated","@NotNull, @NotBlank, @Size, @Min, @Max","@Email, @Pattern","@ControllerAdvice for global exception handling","ProblemDetail (RFC 7807)"], code:`public record CreateProductRequest(\n  @NotBlank @Size(max=200) String name,\n  @Positive double price,\n  @Min(0) int stock\n) {}\n\n@PostMapping\npublic ResponseEntity<?> create(@Valid @RequestBody CreateProductRequest req) {...}` },
+      { id:"EC-020", title:"Build Order placement & cart service", priority:"high", est:"4h", tags:[{label:"spring",cls:"spring"},{label:"java",cls:"java"}], desc:"Implement the core business flow: add to cart → place order → reduce stock → confirm order. Handle edge cases.", concepts:["@Service & @Transactional","Transaction rollback on exception","@Transactional(rollbackFor=...)","Optimistic locking — @Version","Business exception hierarchy"], code:`@Service\n@Transactional\npublic class OrderService {\n  public Order placeOrder(Long userId, List<CartItem> items) {\n    validateStock(items);\n    Order order = createOrder(userId, items);\n    reduceStock(items);\n    return orderRepo.save(order);\n  }\n}` },
+    ]
+  },
+  { id:4, label:"Phase 4", title:"Spring Security & JWT", desc:"Secure the app with JWT, roles and OAuth2.", tags:["JWT","Security","OAuth2"], locked:false,
+    tickets:[
+      { id:"EC-021", title:"Add Spring Security & configure SecurityFilterChain", priority:"high", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Integrate Spring Security into the app. Configure which endpoints are public and which require authentication.", concepts:["SecurityFilterChain bean","requestMatchers — permitAll vs authenticated","CSRF — when to disable","CORS configuration","HTTP Basic vs Bearer token"], code:`@Bean\npublic SecurityFilterChain filterChain(HttpSecurity http) throws Exception {\n  return http\n    .csrf(AbstractHttpConfigurer::disable)\n    .authorizeHttpRequests(auth -> auth\n      .requestMatchers("/api/auth/**").permitAll()\n      .anyRequest().authenticated())\n    .build();\n}` },
+      { id:"EC-022", title:"Implement JWT generation & validation", priority:"high", est:"3h", tags:[{label:"java",cls:"java"},{label:"spring",cls:"spring"}], desc:"Build the JWT utility class: generate tokens on login, validate tokens on each request, extract user details from claims.", concepts:["JWT structure — Header.Payload.Signature","io.jsonwebtoken (jjwt) library","Claims — sub, iat, exp, roles","Secret key signing (HS256)","Token expiry & refresh strategy"], code:`public String generateToken(UserDetails user) {\n  return Jwts.builder()\n    .subject(user.getUsername())\n    .issuedAt(new Date())\n    .expiration(new Date(System.currentTimeMillis() + 86400000))\n    .signWith(secretKey)\n    .compact();\n}` },
+      { id:"EC-023", title:"Build auth endpoints — register, login, refresh", priority:"high", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Create /api/auth/register and /api/auth/login endpoints. Return JWT on successful login.", concepts:["UserDetailsService implementation","PasswordEncoder — BCrypt","AuthenticationManager","UsernamePasswordAuthenticationToken","Refresh token pattern"], code:`@PostMapping("/login")\npublic AuthResponse login(@RequestBody LoginRequest req) {\n  authManager.authenticate(new UsernamePasswordAuthenticationToken(req.email(), req.password()));\n  String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(req.email()));\n  return new AuthResponse(token);\n}` },
+      { id:"EC-024", title:"Add role-based access control (RBAC)", priority:"med", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Implement CUSTOMER and ADMIN roles. Restrict certain endpoints (like product creation) to ADMIN only.", concepts:["@PreAuthorize(\"hasRole('ADMIN')\")","@Secured annotation","GrantedAuthority & SimpleGrantedAuthority","Method-level security — @EnableMethodSecurity","hasAnyRole vs hasAuthority"], code:`@PreAuthorize("hasRole('ADMIN')")\n@PostMapping("/api/products")\npublic ResponseEntity<?> createProduct(@Valid @RequestBody CreateProductRequest req) {...}\n\n@PreAuthorize("hasRole('CUSTOMER')")\n@PostMapping("/api/orders")\npublic ResponseEntity<?> placeOrder(...) {...}` },
+    ]
+  },
+  { id:5, label:"Phase 5", title:"Redis & Performance", desc:"Cache with Redis, optimize queries, connection pooling.", tags:["Redis","Caching","HikariCP"], locked:false,
+    tickets:[
+      { id:"EC-025", title:"Set up Redis & Spring Cache abstraction", priority:"high", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Add Redis as a caching layer. Use Spring's @Cacheable abstraction so the service layer is cache-aware without manual Redis calls.", concepts:["spring-boot-starter-data-redis","@EnableCaching","@Cacheable, @CacheEvict, @CachePut","TTL — time to live","RedisTemplate vs Repository"], code:`@Cacheable(value="products", key="#id")\npublic ProductDTO getProduct(Long id) {\n  return repo.findById(id).map(mapper::toDTO).orElseThrow();\n}\n\n@CacheEvict(value="products", key="#id")\npublic void deleteProduct(Long id) { repo.deleteById(id); }` },
+      { id:"EC-026", title:"Cache product listings & user sessions", priority:"med", est:"2h", tags:[{label:"spring",cls:"spring"},{label:"db",cls:"db"}], desc:"Cache expensive product listing queries and store user session data in Redis for fast access.", concepts:["Cache stampede problem","Cache-aside vs write-through patterns","Serialization — JSON vs Kryo","Redis data structures — String, Hash, List","Session clustering with Spring Session"], code:`// Store cart in Redis Hash\nredisTemplate.opsForHash().put("cart:" + userId, productId, quantity);\n// Retrieve full cart\nMap<Object,Object> cart = redisTemplate.opsForHash().entries("cart:" + userId);` },
+      { id:"EC-027", title:"Optimize JPA queries — N+1 problem", priority:"high", est:"3h", tags:[{label:"db",cls:"db"},{label:"java",cls:"java"}], desc:"Identify and fix the N+1 query problem. Use JOIN FETCH and entity graphs to load data efficiently.", concepts:["N+1 problem — what it is and how to detect","@EntityGraph","JOIN FETCH in JPQL","@BatchSize","Hibernate statistics logging","Query plans — EXPLAIN"], code:`// Bad — N+1\norders.forEach(o -> o.getItems().size()); // extra query per order\n\n// Good — JOIN FETCH\n@Query("SELECT o FROM Order o JOIN FETCH o.items WHERE o.userId = :uid")\nList<Order> findWithItems(@Param("uid") Long userId);` },
+      { id:"EC-028", title:"Configure HikariCP connection pool", priority:"med", est:"1h", tags:[{label:"db",cls:"db"}], desc:"Tune HikariCP settings for production workloads. Understand pool sizing and monitoring.", concepts:["HikariCP — Spring Boot default pool","maximumPoolSize, minimumIdle","connectionTimeout, idleTimeout","Pool sizing formula — (cores * 2) + disk spindles","Actuator /actuator/metrics for pool stats"], code:`spring:\n  datasource:\n    hikari:\n      maximum-pool-size: 10\n      minimum-idle: 5\n      connection-timeout: 30000\n      idle-timeout: 600000` },
+    ]
+  },
+  { id:6, label:"Phase 6", title:"Async & Kafka", desc:"Events, notifications, Kafka message queues.", tags:["Kafka","Async","Events","Email"], locked:false,
+    tickets:[
+      { id:"EC-029", title:"Add @Async for non-blocking email notifications", priority:"med", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Send order confirmation emails asynchronously so the API response doesn't wait for email delivery.", concepts:["@EnableAsync, @Async","ThreadPoolTaskExecutor configuration","CompletableFuture return type","Exception handling in async methods","JavaMailSender for SMTP"], code:`@Async\npublic CompletableFuture<Void> sendOrderConfirmation(Order order) {\n  mailSender.send(buildEmail(order));\n  return CompletableFuture.completedFuture(null);\n}` },
+      { id:"EC-030", title:"Set up Kafka producer for order events", priority:"high", est:"3h", tags:[{label:"java",cls:"java"}], desc:"Publish order events (ORDER_PLACED, ORDER_SHIPPED) to Kafka topics so downstream services can react.", concepts:["Kafka topics, partitions, offsets","KafkaTemplate<K, V>","ProducerRecord & headers","Serialization — JSON with KafkaJsonSerializer","Idempotent producer — enable.idempotence"], code:`@Service\npublic class OrderEventProducer {\n  public void publishOrderPlaced(Order order) {\n    OrderEvent event = new OrderEvent("ORDER_PLACED", order.getId(), Instant.now());\n    kafkaTemplate.send("order-events", order.getId().toString(), event);\n  }\n}` },
+      { id:"EC-031", title:"Build Kafka consumer for inventory & notifications", priority:"high", est:"3h", tags:[{label:"java",cls:"java"}], desc:"Consume ORDER_PLACED events to reduce inventory and trigger notifications in separate consumer groups.", concepts:["@KafkaListener, consumer groups","At-least-once vs exactly-once delivery","Manual offset commit","Dead letter topics — @DltHandler","Consumer lag monitoring"], code:`@KafkaListener(topics="order-events", groupId="inventory-service")\npublic void handleOrderPlaced(OrderEvent event) {\n  if("ORDER_PLACED".equals(event.type())) {\n    inventoryService.reduceStock(event.orderId());\n  }\n}` },
+    ]
+  },
+  { id:7, label:"Phase 7", title:"Microservices", desc:"Break monolith, service discovery, Feign, Resilience4j.", tags:["Microservices","Eureka","Feign"], locked:false,
+    tickets:[
+      { id:"EC-032", title:"Split monolith into Product, Order & User services", priority:"high", est:"4h", tags:[{label:"spring",cls:"spring"},{label:"design",cls:"design"}], desc:"Decompose the monolith into three independent Spring Boot microservices, each with its own database.", concepts:["Domain-driven design — bounded contexts","Database-per-service pattern","Inter-service communication strategies","Service autonomy & independent deployability","API contracts between services"], code:`// Services:\n// product-service  → port 8081, products DB\n// order-service    → port 8082, orders DB\n// user-service     → port 8083, users DB\n// api-gateway      → port 8080 (routes all traffic)` },
+      { id:"EC-033", title:"Set up Eureka service registry", priority:"high", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Use Netflix Eureka for service discovery so services can find each other by name instead of hardcoded URLs.", concepts:["@EnableEurekaServer, @EnableEurekaClient","Self-registration & heartbeats","Instance metadata","Client-side load balancing","Health check integration"], code:`# product-service application.yml\neureka:\n  client:\n    serviceUrl:\n      defaultZone: http://localhost:8761/eureka\nspring:\n  application:\n    name: product-service` },
+      { id:"EC-034", title:"Create Feign clients for inter-service calls", priority:"high", est:"2h", tags:[{label:"spring",cls:"spring"},{label:"java",cls:"java"}], desc:"Use OpenFeign to call other microservices with a clean interface instead of manual RestTemplate calls.", concepts:["@FeignClient(name='product-service')","Feign + Eureka load balancing","FeignException handling","Request interceptors — propagate JWT","Feign logging levels"], code:`@FeignClient(name="product-service")\npublic interface ProductClient {\n  @GetMapping("/api/products/{id}")\n  ProductDTO getProduct(@PathVariable Long id);\n}` },
+      { id:"EC-035", title:"Add Resilience4j circuit breaker & retry", priority:"med", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Make inter-service calls resilient with circuit breakers, retries, and fallbacks.", concepts:["Circuit breaker states — CLOSED, OPEN, HALF_OPEN","@CircuitBreaker(name=..., fallbackMethod=...)","@Retry, @TimeLimiter","Bulkhead pattern","Actuator health indicators for circuit state"], code:`@CircuitBreaker(name="productService", fallbackMethod="getProductFallback")\npublic ProductDTO getProduct(Long id) {\n  return productClient.getProduct(id);\n}\npublic ProductDTO getProductFallback(Long id, Exception e) {\n  return ProductDTO.placeholder();\n}` },
+    ]
+  },
+  { id:8, label:"Phase 8", title:"System Design", desc:"HLD, LLD, CAP theorem, Elasticsearch, scaling.", tags:["HLD","LLD","Elasticsearch","Scaling"], locked:false,
+    tickets:[
+      { id:"EC-036", title:"Draw HLD for ShopLearn platform", priority:"high", est:"3h", tags:[{label:"design",cls:"design"}], desc:"Create a high-level architecture diagram showing all services, databases, caches, message queues, and CDN.", concepts:["HLD components — load balancer, CDN, API gateway","Horizontal vs vertical scaling","Stateless services for scalability","Read replicas for DB scaling","CAP theorem — Consistency, Availability, Partition Tolerance"], code:`// Architecture layers:\n// Client → CDN → Load Balancer → API Gateway\n// → [Product, Order, User, Notification Services]\n// → [PostgreSQL, Redis, Kafka, Elasticsearch]\n// → [S3 for media, SES for email]` },
+      { id:"EC-037", title:"Integrate Elasticsearch for product search", priority:"high", est:"3h", tags:[{label:"spring",cls:"spring"},{label:"db",cls:"db"}], desc:"Add full-text product search using Elasticsearch. Sync data from PostgreSQL to Elasticsearch.", concepts:["Elasticsearch index vs relational table","Documents, mappings, analyzers","spring-data-elasticsearch","ElasticsearchRepository","CDC (Change Data Capture) for sync"], code:`@Document(indexName="products")\npublic class ProductDocument {\n  @Id private String id;\n  @Field(type=Text, analyzer="standard") private String name;\n  @Field(type=Double) private double price;\n}\n\nList<ProductDocument> results = productSearchRepo.findByNameContaining(query);` },
+      { id:"EC-038", title:"Design rate limiting & API throttling", priority:"med", est:"2h", tags:[{label:"spring",cls:"spring"},{label:"design",cls:"design"}], desc:"Protect APIs from abuse with rate limiting using Redis-based token bucket or sliding window algorithm.", concepts:["Token bucket vs sliding window algorithms","Redis INCR for counting requests","Bucket4j library with Spring","429 Too Many Requests response","Rate limit by IP, user, or API key"], code:`@RateLimiter(name="productAPI", fallbackMethod="rateLimitFallback")\n@GetMapping("/api/products")\npublic List<ProductDTO> listProducts() { ... }\n\n// application.yml\nresilience4j.ratelimiter.instances.productAPI:\n  limitForPeriod: 100\n  limitRefreshPeriod: 1s` },
+    ]
+  },
+  { id:9, label:"Phase 9", title:"React Frontend", desc:"Build the shopping UI with React + Redux + Tailwind.", tags:["React","Redux","Axios","Tailwind"], locked:false,
+    tickets:[
+      { id:"EC-039", title:"Set up React app with Vite, Router & Tailwind", priority:"high", est:"2h", tags:[{label:"design",cls:"design"}], desc:"Bootstrap the React frontend with Vite. Configure React Router for navigation and Tailwind CSS for styling.", concepts:["Vite vs Create React App","React Router v6 — <BrowserRouter>, <Routes>, <Route>","Tailwind CSS utility classes","Project structure — pages, components, hooks, services","ESLint & Prettier setup"], code:`// npm create vite@latest shoplearn-ui\n// Routes:\n// / → Home (product listings)\n// /product/:id → Product detail\n// /cart → Shopping cart\n// /orders → Order history\n// /admin → Admin dashboard` },
+      { id:"EC-040", title:"Build product listing with search & filters", priority:"high", est:"3h", tags:[{label:"design",cls:"design"}], desc:"Create the main product grid with search, category filter, price range slider, and sort options.", concepts:["useState, useEffect hooks","Debouncing search input","URL state — useSearchParams","Infinite scroll vs pagination","React Query for data fetching & caching"], code:`function ProductGrid() {\n  const [searchParams, setSearchParams] = useSearchParams();\n  const { data, isLoading } = useQuery({\n    queryKey: ['products', searchParams.toString()],\n    queryFn: () => productAPI.list(searchParams)\n  });\n}` },
+      { id:"EC-041", title:"Implement cart & checkout with Redux Toolkit", priority:"high", est:"3h", tags:[{label:"design",cls:"design"}], desc:"Manage shopping cart state globally with Redux Toolkit. Build the checkout flow with form validation.", concepts:["@reduxjs/toolkit — createSlice, createAsyncThunk","useSelector, useDispatch","Persist cart to localStorage","React Hook Form for checkout form","Stripe.js payment integration placeholder"], code:`const cartSlice = createSlice({\n  name: 'cart',\n  initialState: { items: [], total: 0 },\n  reducers: {\n    addItem: (state, action) => { /* immer mutate */ },\n    removeItem: (state, action) => { ... },\n  }\n});` },
+      { id:"EC-042", title:"Build admin dashboard with order management", priority:"med", est:"3h", tags:[{label:"design",cls:"design"}], desc:"Create an admin panel to manage products, view orders, and update order statuses with protected routes.", concepts:["Protected routes — check JWT role","React Table or TanStack Table","Recharts for analytics charts","Optimistic updates","Role-based component rendering"], code:`function AdminRoute({ children }) {\n  const { user } = useAuth();\n  if (!user || user.role !== 'ADMIN') return <Navigate to="/login" />;\n  return children;\n}` },
+    ]
+  },
+  { id:10, label:"Phase 10", title:"DevOps & Deploy", desc:"Docker, GitHub Actions CI/CD, AWS deployment.", tags:["Docker","AWS","CI/CD"], locked:false,
+    tickets:[
+      { id:"EC-043", title:"Dockerize all microservices", priority:"high", est:"3h", tags:[{label:"java",cls:"java"}], desc:"Write Dockerfiles for each service and a docker-compose.yml to run the full stack locally.", concepts:["Multi-stage Dockerfile for Java","docker-compose services, networks, volumes","Environment variables & secrets","Health checks in Docker","docker buildx for multi-platform"], code:`# Dockerfile\nFROM eclipse-temurin:21-jdk-alpine AS build\nWORKDIR /app\nCOPY . . \nRUN ./mvnw package -DskipTests\nFROM eclipse-temurin:21-jre-alpine\nCOPY --from=build /app/target/*.jar app.jar\nENTRYPOINT ["java","-jar","/app.jar"]` },
+      { id:"EC-044", title:"Set up GitHub Actions CI pipeline", priority:"high", est:"2h", tags:[{label:"java",cls:"java"}], desc:"Automate build, test, and Docker image push on every PR and merge to main.", concepts:["GitHub Actions — workflows, jobs, steps","actions/checkout, actions/setup-java","Maven test in CI","Docker build & push to ECR/GHCR","Branch protection rules"], code:`name: CI\non: [push, pull_request]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-java@v4\n        with: { java-version: '21' }\n      - run: mvn test\n      - run: docker build -t shoplearn .` },
+      { id:"EC-045", title:"Deploy to AWS ECS with RDS & ElastiCache", priority:"high", est:"4h", tags:[{label:"java",cls:"java"}], desc:"Deploy the containerized app to AWS ECS Fargate, connect to RDS PostgreSQL and ElastiCache Redis.", concepts:["ECS Fargate — serverless containers","Task definitions & service configuration","RDS PostgreSQL — managed DB","ElastiCache Redis — managed Redis","Application Load Balancer & target groups","IAM roles & security groups"], code:`# AWS services used:\n# ECS Fargate → run containers\n# RDS PostgreSQL → production DB\n# ElastiCache → Redis cache\n# ALB → load balancer\n# ECR → container registry\n# Secrets Manager → DB credentials` },
+    ]
+  },
+  { id:11, label:"Phase 11", title:"Testing", desc:"JUnit, Mockito, TestContainers, REST Assured.", tags:["JUnit","Mockito","TestContainers"], locked:false,
+    tickets:[
+      { id:"EC-046", title:"Unit test service layer with Mockito", priority:"high", est:"3h", tags:[{label:"java",cls:"java"}], desc:"Write comprehensive unit tests for all service classes using Mockito to mock dependencies.", concepts:["@ExtendWith(MockitoExtension.class)","@Mock, @InjectMocks","when().thenReturn(), thenThrow()","ArgumentCaptor — capture what was passed","verify() — assert method was called"], code:`@ExtendWith(MockitoExtension.class)\nclass OrderServiceTest {\n  @Mock OrderRepository orderRepo;\n  @Mock InventoryService inventoryService;\n  @InjectMocks OrderService orderService;\n\n  @Test\n  void shouldRollbackWhenStockInsufficient() {\n    when(inventoryService.hasStock(any())).thenReturn(false);\n    assertThrows(InsufficientStockException.class, () -> orderService.placeOrder(req));\n  }\n}` },
+      { id:"EC-047", title:"Integration tests with @SpringBootTest & TestContainers", priority:"high", est:"3h", tags:[{label:"java",cls:"java"},{label:"spring",cls:"spring"}], desc:"Write integration tests that start a real Spring context and use TestContainers to spin up real PostgreSQL and Redis.", concepts:["@SpringBootTest with random port","@Testcontainers, @Container","PostgreSQLContainer, RedisContainer","@DynamicPropertySource to override datasource URL","Test slices — @WebMvcTest, @DataJpaTest"], code:`@SpringBootTest(webEnvironment=RANDOM_PORT)\n@Testcontainers\nclass OrderIntegrationTest {\n  @Container static PostgreSQLContainer<?> postgres =\n    new PostgreSQLContainer<>("postgres:16");\n\n  @DynamicPropertySource\n  static void configure(DynamicPropertyRegistry reg) {\n    reg.add("spring.datasource.url", postgres::getJdbcUrl);\n  }\n}` },
+      { id:"EC-048", title:"API contract tests with REST Assured", priority:"med", est:"2h", tags:[{label:"spring",cls:"spring"}], desc:"Test REST API endpoints end-to-end using REST Assured DSL for readable, expressive API tests.", concepts:["REST Assured — given/when/then DSL","RequestSpecification — base URI, headers","Response validation — statusCode, body","JSON path extraction","Authentication — .auth().oauth2(token)"], code:`given()\n  .contentType(JSON)\n  .auth().oauth2(adminToken)\n  .body(new CreateProductRequest("MacBook", 120000, 10))\n.when()\n  .post("/api/products")\n.then()\n  .statusCode(201)\n  .body("name", equalTo("MacBook"))\n  .body("id", notNullValue());` },
+    ]
+  },
+];
+
+// ─── STATE ──────────────────────────────────────────────────────
+let currentPhase = 1;
+let currentTicketId = null;
+
+// Load persisted statuses or default all to 'todo'
+let ticketStatus = {};
+try {
+  const saved = localStorage.getItem('shoplearn_ticketStatus');
+  ticketStatus = saved ? JSON.parse(saved) : {};
+} catch(e) { ticketStatus = {}; }
+
+// Ensure any tickets not yet saved default to 'todo'
+phases.forEach(p => p.tickets.forEach(t => {
+  if (!ticketStatus[t.id]) ticketStatus[t.id] = 'todo';
+}));
+
+function saveStatus() {
+  try { localStorage.setItem('shoplearn_ticketStatus', JSON.stringify(ticketStatus)); } catch(e) {}
+}
+
+// ─── SPRINT STATE ────────────────────────────────────────────────
+let sprintData = {};
+try {
+  const saved = localStorage.getItem('shoplearn_sprintData');
+  sprintData = saved ? JSON.parse(saved) : {};
+} catch(e) { sprintData = {}; }
+
+function saveSprint() {
+  try { localStorage.setItem('shoplearn_sprintData', JSON.stringify(sprintData)); } catch(e) {}
+}
+function getSprintForPhase(phaseId) {
+  return sprintData[phaseId] || { status: 'not_started', startDate: null, endDate: null };
+}
+function startSprint(phaseId) {
+  const dateStr = document.getElementById('sprintStartDate').value;
+  if (!dateStr) { alert('Please select a start date.'); return; }
+  sprintData[phaseId] = { status: 'active', startDate: dateStr, endDate: null };
+  saveSprint(); renderBoard();
+}
+function completeSprint(phaseId) {
+  const dateStr = document.getElementById('sprintEndDate').value;
+  if (!dateStr) { alert('Please select a completion date.'); return; }
+  const sprint = getSprintForPhase(phaseId);
+  sprintData[phaseId] = { ...sprint, status: 'completed', endDate: dateStr };
+  saveSprint(); renderBoard();
+}
+function reopenSprint(phaseId) {
+  const sprint = getSprintForPhase(phaseId);
+  sprintData[phaseId] = { ...sprint, status: 'active', endDate: null };
+  saveSprint(); renderBoard();
+}
+
+// ─── RENDER ─────────────────────────────────────────────────────
+function renderTabs() {
+  const nav = document.getElementById('phaseTabs');
+  nav.innerHTML = phases.map(p => {
+    const sprint = getSprintForPhase(p.id);
+    const dot = sprint.status === 'completed' ? 'var(--done)' : sprint.status === 'active' ? 'var(--inprog)' : 'var(--text3)';
+    return `<div class="phase-tab ${p.id===currentPhase?'active':''}" onclick="switchPhase(${p.id})">
+      <span class="tab-dot" style="background:${dot}"></span>${p.label}
+    </div>`;
+  }).join('');
+}
+
+function renderSprintBar(phase) {
+  const sprint = getSprintForPhase(phase.id);
+  const today = new Date().toISOString().split('T')[0];
+
+  if (sprint.status === 'not_started') {
+    return `<div class="sprint-bar">
+      <div class="sprint-bar-left">
+        <span class="sprint-status-badge not-started">⬜ Not Started</span>
+      </div>
+      <div class="sprint-bar-right">
+        <label class="sprint-label">Start Date</label>
+        <input type="date" id="sprintStartDate" class="sprint-date-input" value="${today}">
+        <button class="sprint-btn start-btn" onclick="startSprint(${phase.id})">▶ Start Sprint</button>
+      </div>
+    </div>`;
+  }
+
+  if (sprint.status === 'active') {
+    return `<div class="sprint-bar">
+      <div class="sprint-bar-left">
+        <span class="sprint-status-badge active">🟡 In Progress</span>
+        <span class="sprint-date-display">Started: <strong>${formatDate(sprint.startDate)}</strong></span>
+      </div>
+      <div class="sprint-bar-right">
+        <label class="sprint-label">Complete Date</label>
+        <input type="date" id="sprintEndDate" class="sprint-date-input" value="${today}">
+        <button class="sprint-btn complete-btn" onclick="completeSprint(${phase.id})">✅ Complete Sprint</button>
+      </div>
+    </div>`;
+  }
+
+  if (sprint.status === 'completed') {
+    return `<div class="sprint-bar">
+      <div class="sprint-bar-left">
+        <span class="sprint-status-badge completed">✅ Completed</span>
+        <span class="sprint-date-display">Started: <strong>${formatDate(sprint.startDate)}</strong> &nbsp;·&nbsp; Completed: <strong>${formatDate(sprint.endDate)}</strong></span>
+      </div>
+      <div class="sprint-bar-right">
+        <button class="sprint-btn reopen-btn" onclick="reopenSprint(${phase.id})">↩ Reopen Sprint</button>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function renderBoard() {
+  const phase = phases.find(p => p.id === currentPhase);
+  document.getElementById('phaseTitle').innerHTML = `<span>Phase ${phase.id}</span> — ${phase.title}`;
+  document.getElementById('phaseDesc').textContent = phase.desc;
+  document.getElementById('phaseTags').innerHTML = phase.tags.map(t => `<span class="tag">${t}</span>`).join('');
+  document.getElementById('lockedOverlay').classList.remove('show');
+
+  // Inject sprint bar
+  const sprintBarEl = document.getElementById('sprintBarContainer');
+  sprintBarEl.innerHTML = renderSprintBar(phase);
+
+  const board = document.getElementById('kanbanBoard');
+  board.style.display = 'grid';
+
+  const cols = [
+    {key:'todo', label:'TO DO', color:'var(--todo)'},
+    {key:'inprog', label:'IN PROGRESS', color:'var(--inprog)'},
+    {key:'review', label:'IN REVIEW', color:'var(--review)'},
+    {key:'done', label:'DONE', color:'var(--done)'},
+  ];
+
+  board.innerHTML = cols.map(col => {
+    const tickets = phase.tickets.filter(t => (ticketStatus[t.id]||'todo') === col.key);
+    return `
+    <div class="column" ondragover="event.preventDefault()" ondrop="drop(event,'${col.key}')">
+      <div class="col-header">
+        <div class="col-title-wrap">
+          <div class="col-dot" style="background:${col.color}"></div>
+          <div class="col-title" style="color:${col.color}">${col.label}</div>
+        </div>
+        <div class="col-count">${tickets.length}</div>
+      </div>
+      ${tickets.map(t => renderTicket(t)).join('')}
+    </div>`;
+  }).join('');
+
+  updateStats();
+}
+
+function renderTicket(t) {
+  const status = ticketStatus[t.id]||'todo';
+  const priorityClass = t.priority==='high'?'priority-high':t.priority==='med'?'priority-med':'priority-low';
+  const priorityLabel = t.priority==='high'?'High':t.priority==='med'?'Medium':'Low';
+  return `
+  <div class="ticket phase${currentPhase}" draggable="true"
+       ondragstart="drag(event,'${t.id}')"
+       onclick="openModal('${t.id}')">
+    <div class="ticket-id">${t.id}</div>
+    <div class="ticket-title">${t.title}</div>
+    <div class="ticket-tags">${t.tags.map(tag=>`<span class="ticket-tag ${tag.cls}">${tag.label}</span>`).join('')}</div>
+    <div class="ticket-footer">
+      <div class="ticket-priority ${priorityClass}">
+        <div class="priority-dot"></div>
+        <span class="priority-text">${priorityLabel}</span>
+      </div>
+      <div class="ticket-est">⏱ ${t.est}</div>
+    </div>
+  </div>`;
+}
+
+function updateStats() {
+  const phase = phases.find(p=>p.id===currentPhase);
+  const all = phase.tickets;
+  const total = all.length;
+  const done = all.filter(t=>(ticketStatus[t.id]||'todo')==='done').length;
+  const inprog = all.filter(t=>(ticketStatus[t.id]||'todo')==='inprog').length;
+  const review = all.filter(t=>(ticketStatus[t.id]||'todo')==='review').length;
+  const todo = all.filter(t=>(ticketStatus[t.id]||'todo')==='todo').length;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statTodo').textContent = todo;
+  document.getElementById('statInProg').textContent = inprog + review;
+  document.getElementById('statDone').textContent = done;
+
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = pct + '%';
+}
+
+// ─── MODAL ──────────────────────────────────────────────────────
+function openModal(ticketId) {
+  const phase = phases.find(p=>p.id===currentPhase);
+  const t = phase.tickets.find(t=>t.id===ticketId);
+  currentTicketId = ticketId;
+
+  document.getElementById('modalId').textContent = t.id + ' · Phase ' + currentPhase;
+  document.getElementById('modalTitle').textContent = t.title;
+  document.getElementById('modalDesc').textContent = t.desc;
+  document.getElementById('modalConcepts').innerHTML = t.concepts.map(c=>`<li>${c}</li>`).join('');
+  if(t.code) {
+    document.getElementById('modalCodeWrap').style.display = 'block';
+    document.getElementById('modalCode').textContent = t.code;
+  } else {
+    document.getElementById('modalCodeWrap').style.display = 'none';
+  }
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if(e.target === this) closeModal();
+});
+
+// ─── STATUS ─────────────────────────────────────────────────────
+function setStatus(id, status) {
+  ticketStatus[id] = status;
+  saveStatus();
+  closeModal();
+  renderBoard();
+}
+
+// ─── DRAG & DROP ────────────────────────────────────────────────
+let draggedId = null;
+function drag(e, id) { draggedId = id; }
+function drop(e, colKey) {
+  if(draggedId) { ticketStatus[draggedId] = colKey; saveStatus(); renderBoard(); draggedId = null; }
+}
+
+// ─── SWITCH PHASE ───────────────────────────────────────────────
+function switchPhase(id) {
+  currentPhase = id;
+  renderTabs();
+  renderBoard();
+}
+
+// ─── INIT ───────────────────────────────────────────────────────
+renderTabs();
+renderBoard();
+</script>
+</body>
+</html>
