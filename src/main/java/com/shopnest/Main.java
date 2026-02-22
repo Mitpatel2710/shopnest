@@ -1,5 +1,6 @@
 package com.shopnest;
 
+import com.shopnest.exception.*;
 import com.shopnest.model.*;
 import com.shopnest.service.ProductAnalyticsService;
 import com.shopnest.service.ProductCatalog;
@@ -398,5 +399,140 @@ public class Main {
         analytics.findFirst(prod ->
                         prod.getCategory().equals("Electronics") && prod.getPrice() < 15000)
                 .ifPresent(prod -> System.out.println("  " + prod.getName() + " ₹" + prod.getPrice()));
+
+
+        // ──────────────────────────────────────────────────
+        // EC-008 — Custom Exceptions
+        // ──────────────────────────────────────────────────
+        System.out.println("\n===== EC-008: Custom Exceptions =====");
+
+        // ── ProductNotFoundException ──────────────────────
+        System.out.println("\n--- ProductNotFoundException ---");
+        try {
+            BaseProduct missing = catalog.findById("INVALID")
+                    .orElseThrow(() -> new ProductNotFoundException("INVALID"));
+        } catch (ProductNotFoundException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Response: " + response);
+        }
+
+        // ── OutOfStockException ───────────────────────────
+        System.out.println("\n--- OutOfStockException ---");
+        try {
+            BaseProduct prod = catalog.findById("E004")
+                    .orElseThrow(() -> new ProductNotFoundException("E004"));
+            int requested = 9999;
+            if (requested > prod.getStockQuantity()) {
+                throw new OutOfStockException(prod.getId(), requested, prod.getStockQuantity());
+            }
+        } catch (OutOfStockException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Response: " + response);
+        }
+
+        // ── DuplicateProductException ─────────────────────
+        System.out.println("\n--- DuplicateProductException ---");
+        try {
+            throw new DuplicateProductException("E004");
+        } catch (DuplicateProductException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Response: " + response);
+        }
+
+        // ── InvalidProductException ───────────────────────
+        System.out.println("\n--- InvalidProductException ---");
+        try {
+            throw new InvalidProductException("P_NEW",
+                    List.of("Name is required", "Price must be positive", "Category cannot be empty"));
+        } catch (InvalidProductException ex) {
+            System.out.println("   Validation errors: " + ex.getValidationErrors());
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Response: " + response);
+        }
+
+        // ── InvalidOrderStateException ────────────────────
+        System.out.println("\n--- InvalidOrderStateException ---");
+        try {
+            throw new InvalidOrderStateException("ORD001", OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+        } catch (InvalidOrderStateException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Current: "   + ex.getCurrentStatus());
+            System.out.println("   Attempted: " + ex.getAttemptedStatus());
+            System.out.println("   Response: "  + response);
+        }
+
+        // ── EmptyCartException ────────────────────────────
+        System.out.println("\n--- EmptyCartException ---");
+        try {
+            Cart emptyCart = new Cart("CART999", user);
+            if (emptyCart.isEmpty()) {
+                throw new EmptyCartException(user.getId());
+            }
+        } catch (EmptyCartException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Response: " + response);
+        }
+
+        // ── UserNotFoundException ─────────────────────────
+        System.out.println("\n--- UserNotFoundException ---");
+        try {
+            throw new UserNotFoundException("email", "unknown@test.com");
+        } catch (UserNotFoundException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Response: " + response);
+        }
+
+        // ── UnauthorizedAccessException ───────────────────
+        System.out.println("\n--- UnauthorizedAccessException ---");
+        try {
+            if (!user.isAdmin()) {
+                throw new UnauthorizedAccessException(user.getId(), "delete products");
+            }
+        } catch (UnauthorizedAccessException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Response: " + response);
+        }
+
+        // ── PaymentFailedException ────────────────────────
+        System.out.println("\n--- PaymentFailedException ---");
+        try {
+            throw new PaymentFailedException("ORD001", 89999.0, "Insufficient balance");
+        } catch (PaymentFailedException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Reason: "   + ex.getReason());
+            System.out.println("   Amount: ₹"  + ex.getAmount());
+            System.out.println("   Response: " + response);
+        }
+
+        // ── InvalidPaymentMethodException ────────────────
+        System.out.println("\n--- InvalidPaymentMethodException ---");
+        try {
+            throw new InvalidPaymentMethodException("BITCOIN", "ORD001");
+        } catch (InvalidPaymentMethodException ex) {
+            ApiResponse<?> response = GlobalExceptionHandler.handle(ex);
+            System.out.println("   Method: "   + ex.getMethod());
+            System.out.println("   Response: " + response);
+        }
+
+        // ── Exception chaining ────────────────────────────
+        System.out.println("\n--- Exception Chaining ---");
+        try {
+            try {
+                // Simulate a low-level DB error
+                throw new RuntimeException("DB connection timeout");
+            } catch (RuntimeException dbEx) {
+                // Wrap it in our domain exception — chaining the cause
+                throw new ShopNestException(
+                        ErrorCode.PRODUCT_NOT_FOUND,
+                        "Failed to fetch product due to DB error",
+                        500, dbEx
+                );
+            }
+        } catch (ShopNestException ex) {
+            System.out.println("   Exception : " + ex.getMessage());
+            System.out.println("   Caused by : " + ex.getCause().getMessage());
+            ApiResponse<?> response = GlobalExceptionHandler.handleUnexpected(ex);
+            System.out.println("   Response  : " + response);
+        }
     }
 }
