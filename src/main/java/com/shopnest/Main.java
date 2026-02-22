@@ -2,9 +2,10 @@ package com.shopnest;
 
 import com.shopnest.exception.*;
 import com.shopnest.model.*;
+import com.shopnest.service.*;
 import com.shopnest.service.ProductAnalyticsService;
-import com.shopnest.service.ProductCatalog;
 import com.shopnest.util.ApiResponse;
+import com.shopnest.util.AppConfig;
 import com.shopnest.util.Page;
 import com.shopnest.util.PaginationUtil;
 
@@ -534,5 +535,154 @@ public class Main {
             ApiResponse<?> response = GlobalExceptionHandler.handleUnexpected(ex);
             System.out.println("   Response  : " + response);
         }
+
+        // ──────────────────────────────────────────────────
+        // EC-009 — Design Patterns
+        // ──────────────────────────────────────────────────
+        System.out.println("\n===== EC-009: Design Patterns =====");
+
+        // ── 1. Builder Pattern ────────────────────────────
+        System.out.println("\n--- Builder Pattern ---");
+
+        Product builtProduct = ProductBuilder.newProduct()
+                .id("P002")
+                .name("Samsung Galaxy S24")
+                .price(74999.0)
+                .stock(30)
+                .category("Electronics")
+                .description("Latest Samsung flagship")
+                .imageUrl("https://shopnest.com/images/s24.jpg")
+                .build();
+
+        System.out.println("Built: " + builtProduct);
+
+        // Builder with validation error
+        System.out.println("\nBuilder validation test:");
+        try {
+            Product invalid = ProductBuilder.newProduct()
+                    .id("")           // invalid
+                    .price(-100)      // invalid
+                    .build();
+        } catch (InvalidProductException ex) {
+            System.out.println("  Caught: " + ex.getValidationErrors());
+        }
+
+        // ── 2. Singleton Pattern ──────────────────────────
+        System.out.println("\n--- Singleton Pattern ---");
+
+        AppConfig config1 = AppConfig.getInstance();
+        AppConfig config2 = AppConfig.getInstance();
+        AppConfig config3 = AppConfig.getInstance();
+
+        System.out.println("Config: " + config1);
+        System.out.println("Same instance? " + (config1 == config2));    // true
+        System.out.println("Same instance? " + (config2 == config3));    // true
+        System.out.println("Max cart items: " + config1.getMaxCartItems());
+        System.out.println("Max discount: "   + config1.getMaxDiscountPercent() + "%");
+
+        // ── 3. Factory Pattern ────────────────────────────
+        System.out.println("\n--- Factory Pattern ---");
+
+        // Caller never uses 'new' directly — Factory decides
+        PaymentProcessor upiProcessor  = PaymentProcessorFactory.getProcessor(PaymentMethod.UPI,  "ORD001");
+        PaymentProcessor cardProcessor = PaymentProcessorFactory.getProcessor(PaymentMethod.CARD, "ORD001");
+        PaymentProcessor codProcessor  = PaymentProcessorFactory.getProcessor(PaymentMethod.COD,  "ORD001");
+
+        // Reuse order from EC-004
+        String upiTxn  = upiProcessor.processPayment(order, 89999.0);
+        System.out.println("  UPI TXN ID: " + upiTxn);
+
+        String cardTxn = cardProcessor.processPayment(order, 89999.0);
+        System.out.println("  CARD TXN ID: " + cardTxn);
+
+        String codTxn  = codProcessor.processPayment(order, 15000.0);
+        System.out.println("  COD TXN ID: " + codTxn);
+
+        // COD limit validation
+        System.out.println("  COD valid for ₹15000? " + codProcessor.validate(15000));
+        System.out.println("  COD valid for ₹75000? " + codProcessor.validate(75000));
+
+        // Get by string — useful for API requests
+        PaymentProcessor fromString = PaymentProcessorFactory.getProcessor("upi", "ORD001");
+        System.out.println("  From string: " + fromString.getPaymentMethodName());
+
+        // Invalid payment method
+        try {
+            PaymentProcessorFactory.getProcessor("CRYPTO", "ORD001");
+        } catch (InvalidPaymentMethodException ex) {
+            System.out.println("  Expected error: " + ex.getMessage());
+        }
+
+        // ── 4. Strategy Pattern ───────────────────────────
+        System.out.println("\n--- Strategy Pattern ---");
+
+        BaseProduct strategyProduct = catalog.findById("E006")
+                .orElseThrow(() -> new ProductNotFoundException("E006"));
+
+        DiscountService discountService = new DiscountService(new NoDiscountStrategy());
+
+        // No discount
+        System.out.println("\nNo Discount:");
+        discountService.getFinalPrice(strategyProduct, user);
+
+        // Swap to seasonal — runtime strategy change
+        System.out.println("\nDiwali Sale:");
+        discountService.setStrategy(new SeasonalDiscountStrategy("Diwali", 25.0));
+        discountService.getFinalPrice(strategyProduct, user);
+
+        // Swap to loyalty
+        System.out.println("\nLoyalty Discount (CUSTOMER):");
+        discountService.setStrategy(new LoyaltyDiscountStrategy());
+        discountService.getFinalPrice(strategyProduct, user);
+
+        // Loyalty for seller
+        user.promoteToSeller();
+        System.out.println("\nLoyalty Discount (SELLER):");
+        discountService.getFinalPrice(strategyProduct, user);
+
+        // Coupon
+        System.out.println("\nCoupon FESTIVE30:");
+        CouponDiscountStrategy coupon = new CouponDiscountStrategy("FESTIVE30");
+        System.out.println("  Valid coupon? " + coupon.isValidCoupon());
+        discountService.setStrategy(coupon);
+        discountService.getFinalPrice(strategyProduct, user);
+
+        // Invalid coupon
+        System.out.println("\nInvalid Coupon FAKE99:");
+        CouponDiscountStrategy fakeCoupon = new CouponDiscountStrategy("FAKE99");
+        System.out.println("  Valid coupon? " + fakeCoupon.isValidCoupon());
+        discountService.setStrategy(fakeCoupon);
+        discountService.getFinalPrice(strategyProduct, user);
+
+        // ── 5. Observer Pattern ───────────────────────────
+        System.out.println("\n--- Observer Pattern ---");
+
+        OrderEventPublisher publisher = new OrderEventPublisher();
+
+        // Register all listeners
+        publisher.subscribe(new EmailNotificationListener());
+        publisher.subscribe(new InventoryUpdateListener());
+        publisher.subscribe(new SellerNotificationListener());
+
+        System.out.println("\nListeners registered: " + publisher.getListenerCount());
+
+        // Publish events — all listeners notified automatically
+        publisher.publish(new OrderEvent(OrderEvent.Type.ORDER_PLACED,    order));
+        publisher.publish(new OrderEvent(OrderEvent.Type.ORDER_CONFIRMED, order));
+        publisher.publish(new OrderEvent(OrderEvent.Type.ORDER_SHIPPED,   order));
+        publisher.publish(new OrderEvent(OrderEvent.Type.ORDER_DELIVERED, order));
+
+        // Unsubscribe seller listener
+        System.out.println();
+        publisher.unsubscribe(publisher.getListeners().get(2));
+        System.out.println("After unsubscribe — listeners: " + publisher.getListenerCount());
+
+        publisher.publish(new OrderEvent(OrderEvent.Type.ORDER_CANCELLED, order));
+
+
+
     }
+
+
+
 }
