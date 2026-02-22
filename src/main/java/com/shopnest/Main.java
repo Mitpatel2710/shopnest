@@ -64,5 +64,67 @@ public class Main {
         // instanceof check
         System.out.println("\nIs laptop Shippable? " + (laptop instanceof Shippable));
         System.out.println("Is tshirt Shippable? " + (tshirt instanceof Shippable));
+
+
+        // ──────────────────────────────────────────────────
+        // EC-004 — User, Cart and Order
+        // ──────────────────────────────────────────────────
+        System.out.println("\n===== EC-004: User, Cart and Order =====");
+
+        // Create a user
+        User user = new User("U001", "Rahul", "Sharma", "rahul@shopnest.com", "secure123");
+        System.out.println("User: " + user);
+        System.out.println("Role: " + user.getRole());
+
+        // Create products
+        ElectronicsProduct macbook = new ElectronicsProduct(
+                "E003", "MacBook Air", "M2 chip laptop",
+                89999.0, 20, "Apple", 12
+        );
+        ClothingProduct jeans = new ClothingProduct(
+                "C002", "Levi's 501", "Classic straight jeans",
+                3499.0, 50, "Levi's", ClothingProduct.Size.M, "Blue"
+        );
+
+        // Add to cart
+        Cart cart = new Cart("CART001", user);
+        cart.addItem(macbook, 1);
+        cart.addItem(jeans, 2);
+
+        System.out.println("\nCart: " + cart);
+        cart.getItems().forEach(item -> System.out.println("  " + item));
+        System.out.println("Cart total: ₹" + cart.getTotalPrice());
+
+        // Add same product again — should increase quantity not duplicate
+        cart.addItem(jeans, 1);
+        System.out.println("\nAfter adding jeans again:");
+        cart.getItems().forEach(item -> System.out.println("  " + item));
+
+        // Place an order
+        Order order = new Order("ORD001", user, cart, "123, MG Road, Bengaluru - 560001");
+        order.setPaymentMethod("UPI");
+        System.out.println("\nOrder placed: " + order);
+        order.getOrderItems().forEach(item -> System.out.println("  " + item));
+
+        // Order lifecycle
+        System.out.println("\nOrder lifecycle:");
+        System.out.println("Status: " + order.getStatus());
+        order.confirm();
+        System.out.println("After confirm: " + order.getStatus());
+        order.ship();
+        System.out.println("After ship: " + order.getStatus());
+        order.deliver();
+        System.out.println("After deliver: " + order.getStatus());
+
+        // Try to cancel delivered order — should throw exception
+        try {
+            order.cancel();
+        } catch (IllegalStateException e) {
+            System.out.println("\nExpected error: " + e.getMessage());
+        }
+
+        // Promote user role
+        user.promoteToSeller();
+        System.out.println("\nAfter promotion: " + user.getRole());
     }
 }
